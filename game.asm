@@ -50,15 +50,18 @@
 .eqv    DITTO_COLOUR_2  0xEDD0F2
 .eqv    DITTO_COLOUR_3  0x000000
 
-platforms:	.byte	0:32
+.eqv	PLATFORM1_COLOUR	0x86DC3D
+
+.data
+platforms:	.byte	0:32 #platform's x, y, type
 
 .text
 # Load 0s into colour registers and jump to draw call if arg $a2 != 0
 # Otherwise, jump to load_colours
-.macro check_undraw (%draw_label, %load_colours)
+.macro draw_undraw (%draw_label, %load_colours)
 	beqz $a2, %load_colours
 	move $t1, $zero
-	move $t2, $zero
+	move $t2, $zero	
 	move $t3, $zero
 	j %draw_label
 .end_macro
@@ -88,15 +91,17 @@ platforms:	.byte	0:32
 
 .globl main
 
-#s4 = frame
+#s4 = h
 #s5 = change_height (default 0)
 #s6 = x (0 < x < 48)
 #s7 = y (0 < y < 114)
 main:
-	li $s6 48
+	li $s6 24
 	li $s7 50
 	li $s5 0
-	li $s4 0
+	li $s4 50
+	jal clear_screen
+	
 	#move $a0, $s6
 	#move $a1, $s7
 	#jal draw_ditto
@@ -129,13 +134,22 @@ change_height:
 	push_stack ($ra)
 	jal draw_ditto
 	pop_stack ($ra)
-	addi $s5, $s5, -1
+	addi $s5, $s5, 1
 	add $s7, $s7, $s5
-	bgt $s7, 50, keep_height
-	li $s5, 12
-keep_height:
+	bgt $s7, 113, change_height_check_1
+change_height_1:
+	blt $s7, $s4, change_height_check_2
+change_height_2:
+	#work on stab platform
 	jr $ra
 
+change_height_check_1:
+	li $s5, -10
+	j change_height_1
+
+change_height_check_2:
+	#work on moving platform
+	j change_height_2
 # Clear the screen. No params.
 clear_screen:
 	li $t1, SCREEN_WIDTH
@@ -153,7 +167,6 @@ pause:
 	li $a0, FRAME_DELAY
 	li $v0, 32
 	syscall
-	addi $s4, $s4, 1
 	jr $ra
 
 # params: $a0: key input, $s6: ditto X, $s7: ditto Y
@@ -167,7 +180,7 @@ ditto_left:
 	push_stack ($ra)	# save return address pointer
 	# undraw at current position
 	jal change_height
-	addi $s6, $s6, -2
+	addi $s6, $s6, -4
 	pop_stack ($ra)
 	jr $ra
 ditto_right:
@@ -175,7 +188,7 @@ ditto_right:
 	push_stack ($ra)	# save return address pointer
 	# undraw at current position
 	jal change_height
-	addi $s6, $s6, 2	# update global coords
+	addi $s6, $s6, 4	# update global coords
 	pop_stack ($ra)
 	jr $ra
 handle_input_return:
@@ -185,7 +198,7 @@ handle_input_return:
 # params: $a0: x, $a1: y, $a2: undraw
 draw_ditto:
 	address_xy
-	check_undraw (draw_ditto_draw, draw_ditto_colours)
+	draw_undraw (draw_ditto_draw, draw_ditto_colours)
 draw_ditto_colours:
 	li $t1, DITTO_COLOUR_1
 	li $t2, DITTO_COLOUR_2
@@ -383,11 +396,24 @@ draw_ditto_draw:
 	jr $ra
 
 draw_platform1:
-	xy_address
-	check_undraw (draw_platform1_draw, draw_platform1_colours)
+	address_xy
+	draw_undraw (draw_platform1_draw, draw_platform1_colours)
 draw_platform1_colours:
 	li $t1, PLATFORM1_COLOUR
 draw_platform1_draw:
 	sw $t1, 0($t0)
 	sw $t1, 4($t0)
 	sw $t1, 8($t0)
+	sw $t1, 12($t0)
+	sw $t1, 16($t0)
+	sw $t1, 20($t0)
+	sw $t1, 24($t0)
+	sw $t1, 28($t0)
+	sw $t1, 32($t0)
+	sw $t1, 36($t0)
+	sw $t1, 40($t0)
+	sw $t1, 44($t0)
+	sw $t1, 48($t0)
+	sw $t1, 52($t0)
+	sw $t1, 56($t0)
+	jr $ra
