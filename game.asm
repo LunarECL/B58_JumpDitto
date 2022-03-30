@@ -528,8 +528,6 @@ draw_platform1_draw:
 # 	sw $t1, 0($t0)
 # 	addi $t0, $t0, -4
 	push_stack ($ra)
-	lw $t5, 0($t0)
-	jal draw_platform1_draw_loop_check
 	sw $t1, 0($t0)
 	sw $t1, 4($t0)
 	sw $t1, 8($t0)
@@ -550,8 +548,6 @@ draw_platform1_draw:
 	sw $t1, 44($t0)
 	sw $t1, 48($t0)
 	sw $t1, 52($t0)
-	lw $t5, 56($t0)
-	jal draw_platform1_draw_loop_check
 	sw $t1, 56($t0)
 	pop_stack ($ra)
 draw_platform1_draw_loop_check:
