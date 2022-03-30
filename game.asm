@@ -54,6 +54,8 @@
 
 .eqv	PLATFORM1_COLOUR	0x86DC3D
 
+.eqv	ENEMY_COLOUR	0xfc2b78
+
 .data
 
 .text
@@ -91,8 +93,10 @@
 
 .globl main
 
-
-#s4 = score
+#s1 = change_enemy_x
+#s2 = enemy_x
+#s3 = enemy_y
+#s4 = health
 #s5 = change_height (default 0)
 #s6 = x (0 < x < 48)
 #s7 = y (0 < y < 114)
@@ -100,7 +104,10 @@ main:
 	li $s6 24
 	li $s7 50
 	li $s5 0
-	li $s4 0
+	li $s4 3
+	li $s3 5
+	li $s2 20
+	li $s1 1
 	jal clear_screen
 set_platform:
 	li $t9 1 #i = 0
@@ -163,15 +170,16 @@ change_height:
 	li $a2, 2		# move True into param 3: undraw
 	push_stack ($ra)
 	jal draw_ditto
-	pop_stack ($ra)
 	addi $s5, $s5, 1
 	add $s7, $s7, $s5
 	bgt $s7, 113, change_height_check_1
-change_height_1:
 	#check move up platform
 	blt $s7, 40, loop_platform
-change_height_2:
-	#work on stab platform
+change_height_1:
+	#enemy update
+	jal set_enemy
+	#
+	pop_stack ($ra)
 	jr $ra
 
 change_height_check_1:
@@ -181,10 +189,9 @@ change_height_check_1:
 loop_platform:
 	li $t9 0 #i = 0
 	la $t8, PLATFORM_BUFFER
-	#for i < 8
 
 platform_loop:
-	bge $t9, 15, change_height_2 #if i>=8 end loop
+	bge $t9, 15, change_height_1 #if i>=8 end loop
 	addi $s7, $zero, 40 #y = 40
 
 	mul $t3, $t9, 12
@@ -519,14 +526,6 @@ draw_platform1:
 draw_platform1_colours:
 	li $t1, PLATFORM1_COLOUR
 draw_platform1_draw:
-# 	li $t6, 0
-# draw_platform1_draw_loop:
-# 	bge $t6, 15, draw_platform1_draw_loop_end
-# 	addi $t6, $t6, 1
-# 	lw $t5, 0($t0)
-# 	bnez $t5, draw_platform1_draw_loop_continue
-# 	sw $t1, 0($t0)
-# 	addi $t0, $t0, -4
 	push_stack ($ra)
 	sw $t1, 0($t0)
 	sw $t1, 4($t0)
@@ -559,4 +558,68 @@ draw_platform1_draw_loop_check:
 	jr $ra
 
 draw_platform1_draw_loop_end:
+	jr $ra
+
+draw_enemy:
+	address_xy
+	draw_undraw (draw_enemy_draw, draw_enemy_colours)
+draw_enemy_colours:
+	li $t1, ENEMY_COLOUR
+draw_enemy_draw:
+	sw $t1, 0($t0)
+	sw $t1, 4($t0)
+	sw $t1, 8($t0)
+	sw $t1, 256($t0)
+	sw $t1, 260($t0)
+	sw $t1, 264($t0)
+	sw $t1, 512($t0)
+	sw $t1, 516($t0)
+	sw $t1, 520($t0)
+	jr $ra
+
+set_enemy:
+	push_stack ($ra)
+	#clear enemy
+	move $a0, $s2
+	move $a1, $s3
+	li $a2, 1
+	jal draw_enemy
+
+	#check at end
+	move $a0, $s2
+	move $a1, $s3
+	beqz $a0, change_enemy_x
+	beq $a0, 125, change_enemy_x
+set_enemy_1:
+	#set x of enemy
+	add $a0, $s2, $s1
+	#check move
+	ble $s7, 40, set_enemy_2
+	j enemy_update
+set_enemy_2:
+	#move down
+	sub $a1, $a1, $s5
+	li $t7, 128
+	#check below end
+	ble $a1, $t7, enemy_update
+
+	#random 0~42 (x)
+	li $v0, 42
+	li $a0, 0
+	li $a1, 48
+	syscall
+
+	j enemy_update
+change_enemy_x:
+	#change direction
+	mul $s1, $s1, -1
+	j set_enemy_1
+
+enemy_update:
+	#redraw
+	move $s2, $a0
+	move $s3, $a1
+	li $a2, 0
+	jal draw_enemy
+	pop_stack($ra)
 	jr $ra
