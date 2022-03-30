@@ -98,7 +98,7 @@ main:
 	li $s6 24
 	li $s7 50
 	li $s5 0
-	li $s4 50
+	li $s4 40
 	jal clear_screen
 set_platform:
 	li $t9 1 #i = 0
@@ -166,19 +166,56 @@ change_height:
 	add $s7, $s7, $s5
 	bgt $s7, 113, change_height_check_1
 change_height_1:
-	blt $s7, $s4, change_height_check_2
-change_height_2:
-	#work on stab platform
+	blt $s7, $s4, loop_platform
 	jr $ra
 
 change_height_check_1:
 	li $s5, -10
 	j change_height_1
 
-change_height_check_2:
+loop_platform:
+	li $t9 0 #i = 0
+	la $t8, PLATFORM_BUFFER
+
+	push_stack ($ra)
+	#for i < 8
+
+platform_loop:
+	bge $t9, 8, platform_loop_end #if i>=8 end loop
+	
+	add $s7, $s4, $zero #y = h
+
+	mul $t3, $t9, 12
+	add $t4, $t8, $t3 #access first(x)
+
+	lw $a0, 0($t4) #platform[i].x
+	lw $a1, 4($t4) #platform[i].y
+	lw $a2, 8($t4) #platform[i].type
+	
+	sub $a1, $a1, $s5
+
+	li $t7, 128
+	ble $a1, $t7, platform_loop_next
+	#random 0~42 (x)
+	li $v0, 42
+	li $a0, 0
+	li $a1, 48
+	syscall
+
+platform_loop_next:
+	#update
+	sw $a0, 0($t4) #platform[i].x
+	sw $a1, 4($t4) #platform[i].y
+	sw $a2, 8($t4) #platform[i].type
+
+	addi $t9, $t9, 1 #i++
+	j platform_loop
 
 
-	j change_height_2
+platform_loop_end:
+	pop_stack ($ra)
+	jr $ra
+
 # Clear the screen. No params.
 clear_screen:
 	li $t1, SCREEN_WIDTH
@@ -424,7 +461,7 @@ draw_ditto_draw:
 	sw $t3 3380($t0)
 	jr $ra
 
-loop_platform:
+loop_draw_platform:
 	li $t9 0 #i = 0
 	la $t8, PLATFORM_BUFFER
 
