@@ -149,7 +149,7 @@ loop_no_input:
 	move $a1, $s7		# move y into param 2
 	move $a2, $zero		# move False into param 3: undraw
 	jal draw_ditto
-	jal loop_platform
+	jal loop_draw_platform
 	jal pause
 	j loop
 
@@ -166,22 +166,24 @@ change_height:
 	add $s7, $s7, $s5
 	bgt $s7, 113, change_height_check_1
 change_height_1:
+	#check move up platform
 	blt $s7, $s4, loop_platform
+change_height_2:
+	#work on stab platform
 	jr $ra
 
 change_height_check_1:
 	li $s5, -10
 	j change_height_1
 
+
 loop_platform:
 	li $t9 0 #i = 0
 	la $t8, PLATFORM_BUFFER
-
-	push_stack ($ra)
 	#for i < 8
 
 platform_loop:
-	bge $t9, 8, platform_loop_end #if i>=8 end loop
+	bge $t9, 8, change_height_2 #if i>=8 end loop
 	
 	add $s7, $s4, $zero #y = h
 
@@ -190,8 +192,16 @@ platform_loop:
 
 	lw $a0, 0($t4) #platform[i].x
 	lw $a1, 4($t4) #platform[i].y
-	lw $a2, 8($t4) #platform[i].type
+	#lw $a2, 8($t4) #platform[i].type
 	
+	push_stack($ra)
+	li $a2, 1
+	jal draw_platform1
+	pop_stack($ra)
+
+	lw $a0, 0($t4) #platform[i].x
+	lw $a1, 4($t4) #platform[i].y
+
 	sub $a1, $a1, $s5
 
 	li $t7, 128
@@ -202,19 +212,16 @@ platform_loop:
 	li $a1, 48
 	syscall
 
+	li $a1, 0
+
 platform_loop_next:
 	#update
 	sw $a0, 0($t4) #platform[i].x
 	sw $a1, 4($t4) #platform[i].y
-	sw $a2, 8($t4) #platform[i].type
 
 	addi $t9, $t9, 1 #i++
 	j platform_loop
 
-
-platform_loop_end:
-	pop_stack ($ra)
-	jr $ra
 
 # Clear the screen. No params.
 clear_screen:
