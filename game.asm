@@ -105,7 +105,7 @@ main:
 	li $s7 50
 	li $s5 0
 	li $s4 3
-	li $s3 5
+	li $s3 0
 	li $s2 20
 	li $s1 1
 	jal clear_screen
@@ -609,6 +609,8 @@ set_enemy_2:
 	li $a1, 48
 	syscall
 
+	li $a1, 0
+
 	j enemy_update
 change_enemy_x:
 	#change direction
@@ -619,7 +621,25 @@ enemy_update:
 	#redraw
 	move $s2, $a0
 	move $s3, $a1
+	bge $s2, $s6, check_collision_1
+	
+enemy_update_1:
 	li $a2, 0
 	jal draw_enemy
 	pop_stack($ra)
 	jr $ra
+
+check_collision_1:
+	bge $s3, $s7, check_collision_2
+	j enemy_update_1
+check_collision_2:
+	addi $t7, $s6, 16
+	ble $s2, $t7, check_collision_3
+	j enemy_update_1
+check_collision_3:
+	addi $t7, $s7, 14
+	ble $s3, $t7, check_collision_4
+	j enemy_update_1
+check_collision_4:
+	pop_stack ($ra)
+	j main
