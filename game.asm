@@ -49,7 +49,7 @@
 # colours
 .eqv    DITTO_COLOUR_1  0xD8A3E0
 .eqv    DITTO_COLOUR_2  0xEDD0F2
-.eqv    DITTO_COLOUR_3  0x000000
+.eqv    DITTO_COLOUR_3  0x1c1c1c
 
 .eqv	PLATFORM1_COLOUR	0x86DC3D
 
@@ -90,7 +90,8 @@
 
 .globl main
 
-#s4 = h
+
+#s4 = score
 #s5 = change_height (default 0)
 #s6 = x (0 < x < 48)
 #s7 = y (0 < y < 114)
@@ -98,7 +99,7 @@ main:
 	li $s6 24
 	li $s7 50
 	li $s5 0
-	li $s4 40
+	li $s4 0
 	jal clear_screen
 set_platform:
 	li $t9 1 #i = 0
@@ -167,14 +168,13 @@ change_height:
 	bgt $s7, 113, change_height_check_1
 change_height_1:
 	#check move up platform
-	blt $s7, $s4, loop_platform
+	blt $s7, 40, loop_platform
 change_height_2:
 	#work on stab platform
 	jr $ra
 
 change_height_check_1:
-	li $s5, -10
-	j change_height_1
+	j main
 
 
 loop_platform:
@@ -184,8 +184,7 @@ loop_platform:
 
 platform_loop:
 	bge $t9, 8, change_height_2 #if i>=8 end loop
-	
-	add $s7, $s4, $zero #y = h
+	addi $s7, $zero, 40 #y = 40
 
 	mul $t3, $t9, 12
 	add $t4, $t8, $t3 #access first(x)
@@ -484,6 +483,10 @@ platform_draw_loop:
 	lw $a0, 0($t4)
 	lw $a1, 4($t4)
 	li $a2, 0
+
+	addi $t5, $s6, 3
+	#bge $t5, $a0 stap_platform_1
+#platform_draw_loop1:
 	
 	jal draw_platform1
 
@@ -507,6 +510,9 @@ draw_platform1_draw:
 # 	bnez $t5, draw_platform1_draw_loop_continue
 # 	sw $t1, 0($t0)
 # 	addi $t0, $t0, -4
+	push_stack ($ra)
+	lw $t5, 0($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 0($t0)
 	sw $t1, 4($t0)
 	sw $t1, 8($t0)
@@ -514,6 +520,8 @@ draw_platform1_draw:
 	sw $t1, 16($t0)
 	sw $t1, 20($t0)
 	sw $t1, 24($t0)
+	lw $t5, 28($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 28($t0)
 	sw $t1, 32($t0)
 	sw $t1, 36($t0)
@@ -521,9 +529,37 @@ draw_platform1_draw:
 	sw $t1, 44($t0)
 	sw $t1, 48($t0)
 	sw $t1, 52($t0)
+	lw $t5, 56($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 56($t0)
-# draw_platform1_draw_loop_continue:
-# 	j draw_platform1_draw_loop
+	pop_stack ($ra)
+draw_platform1_draw_loop_check:
+	la $t6, DITTO_COLOUR_3
+	bne $t5, $t6 draw_platform1_draw_loop_end
+	blez $s5, draw_platform1_draw_loop_end
+	li $s5, -10
+	addi $s4, $s4, 1
+	jr $ra
 
 draw_platform1_draw_loop_end:
 	jr $ra
+
+
+# stap_platform_1:
+# 	addi $t5, $s6, 1
+# 	addi $t6, $a0, 4
+# 	ble $t5, $t6, stap_platform_2
+# 	j platform_draw_loop1
+# stap_platform_2:
+# 	addi $t5, $s7, 4
+# 	bgt $t5, $a1, stap_platform_3
+# 	j platform_draw_loop1
+# stap_platform_3:
+# 	addi $t5, $s7, 4
+# 	addi $t6, $a1, 1
+# 	blt $t5, $t6, stap_platform_4
+# 	j platform_draw_loop1
+# stap_platform_4:
+# 	blez $s5  platform_draw_loop1
+# 	li $s5, -10
+# 	j platform_draw_loop1
