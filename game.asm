@@ -35,12 +35,13 @@
 #####################################################################
 .eqv    FRAME_BUFFER    0x10008000
 .eqv 	INPUT_BUFFER	0xffff0000
-.eqv 	PLATFORM_BUFFER	0x10007F88
+.eqv 	PLATFORM_BUFFER	0x10007F10
 
 ######## Constants
 .eqv 	SCREEN_WIDTH	64	# units
 .eqv 	SCREEN_HEIGHT	128	# units
 .eqv    FRAME_DELAY     30
+.eqv    CLEAR_DELAY     1
 
 # gameplay settings
 .eqv    JUMP_SEED   10
@@ -111,7 +112,7 @@ set_platform:
 
 	#for i < 10
 set_platform_loop:
-	bge $t9, 8, loop #if i>=10 end loop
+	bge $t9, 15, loop #if i>=15 end loop
 
 	#random 0~42 (x)
 	li $v0, 42
@@ -183,7 +184,7 @@ loop_platform:
 	#for i < 8
 
 platform_loop:
-	bge $t9, 8, change_height_2 #if i>=8 end loop
+	bge $t9, 15, change_height_2 #if i>=8 end loop
 	addi $s7, $zero, 40 #y = 40
 
 	mul $t3, $t9, 12
@@ -224,14 +225,19 @@ platform_loop_next:
 
 # Clear the screen. No params.
 clear_screen:
+	li $t2, 0
 	li $t1, SCREEN_WIDTH
 	mul $t1, $t1, SCREEN_HEIGHT
 	sll $t1, $t1, 2
 	li $t0, FRAME_BUFFER	# load start address into $t0
 	addi $t1, $t1, FRAME_BUFFER	# load final address into $t1
 clear_screen_loop:
+	addi $t2, $t2, 1
 	sw $zero, 0($t0)		# clear pixel
 	addi $t0, $t0, 4
+	push_stack ($ra)
+	jal over_pause
+	pop_stack ($ra)
 	ble $t0, $t1, clear_screen_loop
 	jr $ra
 # pause
@@ -240,7 +246,18 @@ pause:
 	li $v0, 32
 	syscall
 	jr $ra
-
+# pause
+over_pause:
+	li $t3, 10
+	div $t2, $t3
+	mfhi $t2
+	bnez $t2 over_pause_end
+	li $a0, CLEAR_DELAY
+	li $v0, 32
+	syscall
+	jr $ra
+over_pause_end:
+	jr $ra
 # params: $a0: key input, $s6: ditto X, $s7: ditto Y
 handle_input:
 	beq $a0, 0x61, ditto_left
@@ -475,7 +492,7 @@ loop_draw_platform:
 	#for i < 10
 
 platform_draw_loop:
-	bge $t9, 8, platform_draw_loop_end #if i>=10 end loop
+	bge $t9, 15, platform_draw_loop_end #if i>=15 end loop
 	
 	mul $t3, $t9, 12
 	add $t4, $t8, $t3 #access first(x)
@@ -517,6 +534,8 @@ draw_platform1_draw:
 	sw $t1, 4($t0)
 	sw $t1, 8($t0)
 	sw $t1, 12($t0)
+	lw $t5, 16($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 16($t0)
 	sw $t1, 20($t0)
 	sw $t1, 24($t0)
@@ -526,6 +545,8 @@ draw_platform1_draw:
 	sw $t1, 32($t0)
 	sw $t1, 36($t0)
 	sw $t1, 40($t0)
+	lw $t5, 44($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 44($t0)
 	sw $t1, 48($t0)
 	sw $t1, 52($t0)
@@ -535,7 +556,7 @@ draw_platform1_draw:
 	pop_stack ($ra)
 draw_platform1_draw_loop_check:
 	la $t6, DITTO_COLOUR_3
-	bne $t5, $t6 draw_platform1_draw_loop_end
+	bnez $t5, draw_platform1_draw_loop_end
 	blez $s5, draw_platform1_draw_loop_end
 	li $s5, -10
 	addi $s4, $s4, 1
@@ -543,23 +564,3 @@ draw_platform1_draw_loop_check:
 
 draw_platform1_draw_loop_end:
 	jr $ra
-
-
-# stap_platform_1:
-# 	addi $t5, $s6, 1
-# 	addi $t6, $a0, 4
-# 	ble $t5, $t6, stap_platform_2
-# 	j platform_draw_loop1
-# stap_platform_2:
-# 	addi $t5, $s7, 4
-# 	bgt $t5, $a1, stap_platform_3
-# 	j platform_draw_loop1
-# stap_platform_3:
-# 	addi $t5, $s7, 4
-# 	addi $t6, $a1, 1
-# 	blt $t5, $t6, stap_platform_4
-# 	j platform_draw_loop1
-# stap_platform_4:
-# 	blez $s5  platform_draw_loop1
-# 	li $s5, -10
-# 	j platform_draw_loop1
