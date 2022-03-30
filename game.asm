@@ -35,6 +35,7 @@
 #####################################################################
 .eqv    FRAME_BUFFER    0x10008000
 .eqv 	INPUT_BUFFER	0xffff0000
+.eqv 	PLATFORM_BUFFER	0x10007F88
 
 ######## Constants
 .eqv 	SCREEN_WIDTH	64	# units
@@ -53,11 +54,10 @@
 .eqv	PLATFORM1_COLOUR	0x86DC3D
 
 .data
-platforms:	.byte	0:32 #platform's x, y, type
 
 .text
-# Load 0s into colour registers and jump to draw call if arg $a2 != 0
-# Otherwise, jump to load_colours
+# if $a2 == 0 -> clear old map
+#else draw new
 .macro draw_undraw (%draw_label, %load_colours)
 	beqz $a2, %load_colours
 	move $t1, $zero
@@ -67,8 +67,7 @@ platforms:	.byte	0:32 #platform's x, y, type
 .end_macro
 
 # Takes x,y coordinates in $a0, $a1
-# Calculate the pixel on fame and put in to $t0
-# overwrites $t1
+# calculate the array adress and put $t0
 .macro address_xy
 	sll $a0, $a0, 2 #x*4
 	sll $a1, $a1, 2 #y*4
@@ -101,12 +100,40 @@ main:
 	li $s5 0
 	li $s4 50
 	jal clear_screen
-	
-	#move $a0, $s6
-	#move $a1, $s7
-	#jal draw_ditto
-	#li $v0, 10 		# terminate the program
-	#syscall
+set_platform:
+	li $t9 1 #i = 0
+	la $t8, PLATFORM_BUFFER
+	addi $a0, $s7, 32
+	sw $s6, 0($t8) #x
+	sw $a0, 4($t8) #y
+	sw $zero, 8($t8) #type 0
+
+	#for i < 10
+set_platform_loop:
+	bge $t9, 8, loop #if i>=10 end loop
+
+	#random 0~42 (x)
+	li $v0, 42
+	li $a0, 0
+	li $a1, 48
+	syscall
+
+	mul $t3, $t9, 12
+	add $t4, $t8, $t3 #access first(x)
+	 
+	sw $a0, 0($t4) #x
+
+	#random 0~50 (y)
+	li $v0, 42
+	li $a0, 0
+	li $a1, 114
+	syscall
+
+	sw $a0, 4($t4) #y
+	sw $zero, 8($t4) #type 0
+
+	addi $t9, $t9, 1 #i++
+	j set_platform_loop
 
 loop:
 	# check for key input and handle it if necessary
@@ -122,6 +149,7 @@ loop_no_input:
 	move $a1, $s7		# move y into param 2
 	move $a2, $zero		# move False into param 3: undraw
 	jal draw_ditto
+	jal loop_platform
 	jal pause
 	j loop
 
@@ -148,7 +176,8 @@ change_height_check_1:
 	j change_height_1
 
 change_height_check_2:
-	#work on moving platform
+
+
 	j change_height_2
 # Clear the screen. No params.
 clear_screen:
@@ -395,12 +424,45 @@ draw_ditto_draw:
 	sw $t3 3380($t0)
 	jr $ra
 
+loop_platform:
+	li $t9 0 #i = 0
+	la $t8, PLATFORM_BUFFER
+
+	push_stack ($ra)
+	#for i < 10
+
+platform_draw_loop:
+	bge $t9, 8, platform_draw_loop_end #if i>=10 end loop
+	
+	mul $t3, $t9, 12
+	add $t4, $t8, $t3 #access first(x)
+
+	lw $a0, 0($t4)
+	lw $a1, 4($t4)
+	li $a2, 0
+	
+	jal draw_platform1
+
+	addi $t9, $t9, 1 #i++
+	j platform_draw_loop
+platform_draw_loop_end:
+	pop_stack ($ra)
+	jr $ra
+
 draw_platform1:
 	address_xy
 	draw_undraw (draw_platform1_draw, draw_platform1_colours)
 draw_platform1_colours:
 	li $t1, PLATFORM1_COLOUR
 draw_platform1_draw:
+# 	li $t6, 0
+# draw_platform1_draw_loop:
+# 	bge $t6, 15, draw_platform1_draw_loop_end
+# 	addi $t6, $t6, 1
+# 	lw $t5, 0($t0)
+# 	bnez $t5, draw_platform1_draw_loop_continue
+# 	sw $t1, 0($t0)
+# 	addi $t0, $t0, -4
 	sw $t1, 0($t0)
 	sw $t1, 4($t0)
 	sw $t1, 8($t0)
@@ -416,4 +478,8 @@ draw_platform1_draw:
 	sw $t1, 48($t0)
 	sw $t1, 52($t0)
 	sw $t1, 56($t0)
+# draw_platform1_draw_loop_continue:
+# 	j draw_platform1_draw_loop
+
+draw_platform1_draw_loop_end:
 	jr $ra
