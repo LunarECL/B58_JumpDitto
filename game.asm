@@ -95,7 +95,6 @@
 
 #s1 = change_enemy_x
 #s2 = enemy_x
-#s3 = enemy_y
 #s4 = health
 #s5 = change_height (default 0)
 #s6 = x (0 < x < 48)
@@ -119,7 +118,7 @@ set_platform:
 
 	#for i < 10
 set_platform_loop:
-	bge $t9, 15, loop #if i>=15 end loop
+	bge $t9, 10, loop #if i>=15 end loop
 
 	#random 0~42 (x)
 	li $v0, 42
@@ -131,12 +130,7 @@ set_platform_loop:
 	add $t4, $t8, $t3 #access first(x)
 	 
 	sw $a0, 0($t4) #x
-
-	#random 0~50 (y)
-	li $v0, 42
-	li $a0, 0
-	li $a1, 114
-	syscall
+	mul $a0, $t9, 11	
 
 	sw $a0, 4($t4) #y
 	sw $zero, 8($t4) #type 0
@@ -158,6 +152,7 @@ loop_no_input:
 	move $a1, $s7		# move y into param 2
 	move $a2, $zero		# move False into param 3: undraw
 	jal draw_ditto
+	jal set_enemy
 	jal loop_draw_platform
 	jal pause
 	j loop
@@ -176,9 +171,6 @@ change_height:
 	#check move up platform
 	blt $s7, 40, loop_platform
 change_height_1:
-	#enemy update
-	jal set_enemy
-	#
 	pop_stack ($ra)
 	jr $ra
 
@@ -191,7 +183,7 @@ loop_platform:
 	la $t8, PLATFORM_BUFFER
 
 platform_loop:
-	bge $t9, 15, change_height_1 #if i>=8 end loop
+	bge $t9, 10, change_height_1 #if i>=8 end loop
 	addi $s7, $zero, 40 #y = 40
 
 	mul $t3, $t9, 12
@@ -499,7 +491,7 @@ loop_draw_platform:
 	#for i < 10
 
 platform_draw_loop:
-	bge $t9, 15, platform_draw_loop_end #if i>=15 end loop
+	bge $t9, 10, platform_draw_loop_end #if i>=15 end loop
 	
 	mul $t3, $t9, 12
 	add $t4, $t8, $t3 #access first(x)
@@ -527,34 +519,60 @@ draw_platform1_colours:
 	li $t1, PLATFORM1_COLOUR
 draw_platform1_draw:
 	push_stack ($ra)
+	lw $t5, 0($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 0($t0)
+	lw $t5, 4($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 4($t0)
+	lw $t5, 8($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 8($t0)
+	lw $t5, 12($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 12($t0)
 	lw $t5, 16($t0)
 	jal draw_platform1_draw_loop_check
 	sw $t1, 16($t0)
+	lw $t5, 20($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 20($t0)
+	lw $t5, 24($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 24($t0)
 	lw $t5, 28($t0)
 	jal draw_platform1_draw_loop_check
 	sw $t1, 28($t0)
+	lw $t5, 32($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 32($t0)
+	lw $t5, 36($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 36($t0)
+	lw $t5, 40($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 40($t0)
 	lw $t5, 44($t0)
 	jal draw_platform1_draw_loop_check
 	sw $t1, 44($t0)
+	lw $t5, 48($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 48($t0)
+	lw $t5, 52($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 52($t0)
+	lw $t5, 56($t0)
+	jal draw_platform1_draw_loop_check
 	sw $t1, 56($t0)
 	pop_stack ($ra)
+	j draw_platform1_draw_loop_end
 draw_platform1_draw_loop_check:
 	la $t6, DITTO_COLOUR_3
-	bnez $t5, draw_platform1_draw_loop_end
+	bne $t5, $t6, draw_platform1_draw_loop_end
 	blez $s5, draw_platform1_draw_loop_end
 	li $s5, -10
 	addi $s4, $s4, 1
+	pop_stack ($ra)
 	jr $ra
 
 draw_platform1_draw_loop_end:
@@ -566,14 +584,50 @@ draw_enemy:
 draw_enemy_colours:
 	li $t1, ENEMY_COLOUR
 draw_enemy_draw:
+	lw $t6, 0($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 0($t0)
+	lw $t6, 4($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 4($t0)
+	lw $t6, 8($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 8($t0)
+	lw $t6, 256($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 256($t0)
+	lw $t6, 260($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 260($t0)
+	lw $t6, 264($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 264($t0)
+	lw $t6, 512($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 512($t0)
+	lw $t6, 516($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 516($t0)
+	lw $t6, 520($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t1, 520($t0)
 	jr $ra
 
@@ -621,25 +675,11 @@ enemy_update:
 	#redraw
 	move $s2, $a0
 	move $s3, $a1
-	bge $s2, $s6, check_collision_1
-	
-enemy_update_1:
 	li $a2, 0
 	jal draw_enemy
 	pop_stack($ra)
 	jr $ra
 
-check_collision_1:
-	bge $s3, $s7, check_collision_2
-	j enemy_update_1
-check_collision_2:
-	addi $t7, $s6, 16
-	ble $s2, $t7, check_collision_3
-	j enemy_update_1
-check_collision_3:
-	addi $t7, $s7, 14
-	ble $s3, $t7, check_collision_4
-	j enemy_update_1
-check_collision_4:
+check_collision:
 	pop_stack ($ra)
 	j main
