@@ -57,6 +57,8 @@
 .eqv	ENEMY_COLOUR	0xfc2b78
 .eqv	ENEMY_COLOUR1	0x00FFFF
 
+.eqv	SHOOT_COLOUR	0xADD8E6
+
 .data
 
 .text
@@ -94,6 +96,7 @@
 
 .globl main
 
+#s0 = static_enemy_alive
 #s1 = change_enemy_x
 #s2 = enemy_x
 #s4 = health
@@ -108,6 +111,7 @@ main:
 	li $s3 0
 	li $s2 20
 	li $s1 1
+	li $s0 0
 	jal clear_screen
 set_platform:
 	li $t9 1 #i = 0
@@ -157,6 +161,7 @@ loop_no_input:
 	move $a2, $zero		# move False into param 3: undraw
 	jal draw_ditto
 	jal set_enemy
+	jal draw_static_enemy
 	jal loop_draw_platform
 	jal pause
 	j loop
@@ -274,10 +279,12 @@ over_pause:
 	jr $ra
 over_pause_end:
 	jr $ra
+
 # params: $a0: key input, $s6: ditto X, $s7: ditto Y
 handle_input:
 	beq $a0, 0x61, ditto_left
 	beq $a0, 0x64, ditto_right
+	beq $a0, 0x65, ditto_shoot
 	beq $a0, 0x70, main	
 	jr $ra
 ditto_left:
@@ -296,6 +303,10 @@ ditto_right:
 	addi $s6, $s6, 4	# update global coords
 	pop_stack ($ra)
 	jr $ra
+ditto_shoot:
+	push_stack ($ra)
+	jal shooting
+	pop_stack ($ra)
 handle_input_return:
 	jr $ra
 # draw the ditto at the specified coordinates
@@ -649,6 +660,9 @@ draw_enemy_draw:
 	jr $ra
 
 set_enemy:
+	bgt $s2, -10, set_pass_enemy
+	jr $ra
+set_pass_enemy:
 	push_stack ($ra)
 	#clear enemy
 	move $a0, $s2
@@ -694,7 +708,6 @@ enemy_update:
 	move $s3, $a1
 	li $a2, 0
 	jal draw_enemy
-	jal draw_static_enemy
 	pop_stack($ra)
 	jr $ra
 
@@ -703,6 +716,9 @@ check_collision:
 	j main
 
 draw_static_enemy:
+	beqz $s0, set_pass_statc_enemy
+	jr $ra
+set_pass_statc_enemy:
 	li $a0, 10
 	li $a1, 70
 	address_xy
@@ -752,4 +768,104 @@ draw_static_enemy:
 	beq $t6 DITTO_COLOUR_2, check_collision
 	beq $t6 DITTO_COLOUR_3, check_collision
 	sw $t2, 1544($t0)
+	jr $ra
+
+
+draw_shooting:
+	address_xy
+	draw_undraw (draw_shooting_1, draw_shooting_colour)
+draw_shooting_colour:
+	li $t1, SHOOT_COLOUR
+draw_shooting_1:
+	push_stack ($ra)
+	lw $t5, 0($t0)
+	jal draw_shoot_check
+	sw $t1, 0($t0)
+	lw $t5, 4($t0)
+	jal draw_shoot_check
+	sw $t1, 4($t0)
+	lw $t5, 8($t0)
+	jal draw_shoot_check
+	sw $t1, 8($t0)
+	lw $t5, 12($t0)
+	jal draw_shoot_check
+	sw $t1, 12($t0)
+	lw $t5, 16($t0)
+	jal draw_shoot_check
+	sw $t1, 16($t0)
+	lw $t5, 20($t0)
+	jal draw_shoot_check
+	sw $t1, 20($t0)
+	lw $t5, 24($t0)
+	jal draw_shoot_check
+	sw $t1, 24($t0)
+	lw $t5, 28($t0)
+	jal draw_shoot_check
+	sw $t1, 28($t0)
+	lw $t5, 32($t0)
+	jal draw_shoot_check
+	sw $t1, 32($t0)
+	lw $t5, 36($t0)
+	jal draw_shoot_check
+	sw $t1, 36($t0)
+	lw $t5, 40($t0)
+	jal draw_shoot_check
+	sw $t1, 40($t0)
+	lw $t5, 44($t0)
+	jal draw_shoot_check
+	sw $t1, 44($t0)
+	lw $t5, 48($t0)
+	jal draw_shoot_check
+	sw $t1, 48($t0)
+	lw $t5, 52($t0)
+	jal draw_shoot_check
+	sw $t1, 52($t0)
+	lw $t5, 56($t0)
+	jal draw_shoot_check
+	sw $t1, 56($t0)
+	pop_stack ($ra)
+	jr $ra
+draw_shoot_check:
+	la $t6, ENEMY_COLOUR
+	la $t7, ENEMY_COLOUR1
+	bne $t5, $t6, draw_shoot_check_1
+	li $s2, -10
+draw_shoot_check_1:	
+	bne $t5, $t7, draw_shoot_check_2
+	li $s0, 1
+draw_shoot_check_2:
+	jr $ra
+
+
+
+shooting:
+	push_stack ($ra)
+	move $t4, $s6
+	move $a0, $s7
+
+loop_shooting:
+	beq $t4, $zero loop_shooting_end
+	move $a1, $t4
+
+	li $a2, 2
+	jal draw_shooting
+
+	jal shoot_pause
+
+	li $a2, 0
+	jal draw_shooting
+
+	jal shoot_pause
+
+	addi $t4, $t4, -1
+	j loop_shooting
+
+loop_shooting_end:
+	pop_stack ($ra)
+	jr $ra
+
+shoot_pause:
+	li $a0, 200
+	li $v0, 32
+	syscall
 	jr $ra
