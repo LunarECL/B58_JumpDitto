@@ -18,9 +18,9 @@
 #
 # Which approved features have been implemented for milestone 3?
 # (See the assignment handout for the list of additional features)
-# 1. (fill in the feature, if any)
-# 2. (fill in the feature, if any)
-# 3. (fill in the feature, if any)
+# 1. Draw the level (Platforms), Draw the player character(Ditto), at least 2 additional objects(enemies)
+# 2. Player can move, Platform collision and gravity, at least 3 different platforms, Collision with objects
+# 3. Fail condition, Moving objects, Moving platforms
 # ... (add more if necessary)
 #
 # Link to video demonstration for final submission:
@@ -55,6 +55,7 @@
 .eqv	PLATFORM1_COLOUR	0x86DC3D
 
 .eqv	ENEMY_COLOUR	0xfc2b78
+.eqv	ENEMY_COLOUR1	0x00FFFF
 
 .data
 
@@ -116,6 +117,7 @@ set_platform:
 	sw $a0, 4($t8) #y
 	sw $zero, 8($t8) #type 0
 
+
 	#for i < 10
 set_platform_loop:
 	bge $t9, 10, loop #if i>=15 end loop
@@ -133,7 +135,9 @@ set_platform_loop:
 	mul $a0, $t9, 11	
 
 	sw $a0, 4($t4) #y
-	sw $zero, 8($t4) #type 0
+	
+	li $a0, 1
+	sw $a0, 8($t4) #type 0
 
 	addi $t9, $t9, 1 #i++
 	j set_platform_loop
@@ -191,7 +195,6 @@ platform_loop:
 
 	lw $a0, 0($t4) #platform[i].x
 	lw $a1, 4($t4) #platform[i].y
-	#lw $a2, 8($t4) #platform[i].type
 	
 	push_stack($ra)
 	li $a2, 1
@@ -200,10 +203,16 @@ platform_loop:
 
 	lw $a0, 0($t4) #platform[i].x
 	lw $a1, 4($t4) #platform[i].y
+	lw $a2, 8($t4) #platform[i].type
+	beq $a2, 1, platform_move
+
+platform_loop_1:
 
 	sub $a1, $a1, $s5
 
+
 	li $t7, 128
+
 	ble $a1, $t7, platform_loop_next
 	#random 0~42 (x)
 	li $v0, 42
@@ -221,6 +230,14 @@ platform_loop_next:
 	addi $t9, $t9, 1 #i++
 	j platform_loop
 
+platform_move:
+	addi $a0, $a0, 1
+	beq $a0, 113, change_platform_move_1
+	j platform_loop_1
+
+change_platform_move_1:
+	li $a0, 0
+	j platform_loop_1
 
 # Clear the screen. No params.
 clear_screen:
@@ -571,7 +588,6 @@ draw_platform1_draw_loop_check:
 	bne $t5, $t6, draw_platform1_draw_loop_end
 	blez $s5, draw_platform1_draw_loop_end
 	li $s5, -10
-	addi $s4, $s4, 1
 	pop_stack ($ra)
 	jr $ra
 
@@ -583,6 +599,7 @@ draw_enemy:
 	draw_undraw (draw_enemy_draw, draw_enemy_colours)
 draw_enemy_colours:
 	li $t1, ENEMY_COLOUR
+	li $t2, ENEMY_COLOUR1
 draw_enemy_draw:
 	lw $t6, 0($t0)
 	beq $t6 DITTO_COLOUR_1, check_collision
@@ -677,9 +694,62 @@ enemy_update:
 	move $s3, $a1
 	li $a2, 0
 	jal draw_enemy
+	jal draw_static_enemy
 	pop_stack($ra)
 	jr $ra
 
 check_collision:
 	pop_stack ($ra)
 	j main
+
+draw_static_enemy:
+	li $a0, 10
+	li $a1, 70
+	address_xy
+	li $t2, ENEMY_COLOUR1
+	lw $t6, 1024($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1024($t0)
+	lw $t6, 1028($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1028($t0)
+	lw $t6, 1032($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1032($t0)
+	lw $t6, 1280($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1280($t0)
+	lw $t6, 1284($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1284($t0)
+	lw $t6, 1288($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1288($t0)
+	lw $t6, 1536($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1536($t0)
+	lw $t6, 1540($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1540($t0)
+	lw $t6, 1544($t0)
+	beq $t6 DITTO_COLOUR_1, check_collision
+	beq $t6 DITTO_COLOUR_2, check_collision
+	beq $t6 DITTO_COLOUR_3, check_collision
+	sw $t2, 1544($t0)
+	jr $ra
