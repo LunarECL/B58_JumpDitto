@@ -20,7 +20,7 @@
 # (See the assignment handout for the list of additional features)
 # 1. Draw the level (Platforms), Draw the player character(Ditto), at least 2 additional objects(enemies)
 # 2. Player can move, Platform collision and gravity, at least 3 different platforms, Collision with objects
-# 3. Fail condition, Moving objects, Moving platforms
+# 3. Fail condition, Moving objects, Moving platforms, Shooting,
 # ... (add more if necessary)
 #
 # Link to video demonstration for final submission:
@@ -104,15 +104,18 @@
 #s6 = x (0 < x < 48)
 #s7 = y (0 < y < 114)
 main:
+	li $s4 3
+main_again:
 	li $s6 24
 	li $s7 50
 	li $s5 0
-	li $s4 3
 	li $s3 0
 	li $s2 20
 	li $s1 1
 	li $s0 0
 	jal clear_screen
+	blez $s4, game_over
+	addi $s4, $s4, -1
 set_platform:
 	li $t9 1 #i = 0
 	la $t8, PLATFORM_BUFFER
@@ -184,7 +187,7 @@ change_height_1:
 	jr $ra
 
 change_height_check_1:
-	j main
+	j main_again
 
 
 loop_platform:
@@ -244,6 +247,20 @@ change_platform_move_1:
 	li $a0, 0
 	j platform_loop_1
 
+game_over:
+	jal pause
+	#Check until P pressed
+	li $a0, 25
+	li $a1, 50
+	li $a2, 0
+	jal draw_ditto
+	li $t9, INPUT_BUFFER 
+	lw $t8, 0($t9)
+	bne $t8, 1, game_over
+	lw $t8, 4($t9)
+	beq $t8, 0x70, main
+	j game_over	#keep looping
+
 # Clear the screen. No params.
 clear_screen:
 	li $t2, 0
@@ -279,6 +296,7 @@ over_pause:
 	jr $ra
 over_pause_end:
 	jr $ra
+
 
 # params: $a0: key input, $s6: ditto X, $s7: ditto Y
 handle_input:
@@ -713,7 +731,7 @@ enemy_update:
 
 check_collision:
 	pop_stack ($ra)
-	j main
+	j main_again
 
 draw_static_enemy:
 	beqz $s0, set_pass_statc_enemy
@@ -837,35 +855,41 @@ draw_shoot_check_2:
 	jr $ra
 
 
+draw_shooting_loop_1:
+	push_stack ($ra)
+	
+draw_shooting_loop_2:
+	move $a0, $t8
+	move $a1, $t9
+	beq $a1, 0, draw_shooting_loop_2_end
+	jal draw_shooting
+	addi $t9, $t9, -1
+	j draw_shooting_loop_2
 
+draw_shooting_loop_2_end:
+	pop_stack($ra)
+	jr $ra
 shooting:
 	push_stack ($ra)
-	move $t4, $s6
-	move $a0, $s7
-
-loop_shooting:
-	beq $t4, $zero loop_shooting_end
-	move $a1, $t4
-
-	li $a2, 2
-	jal draw_shooting
-
-	jal shoot_pause
-
+	move $t8, $s6
+	move $t9, $s7
 	li $a2, 0
-	jal draw_shooting
-
+	jal draw_shooting_loop_1
 	jal shoot_pause
-
-	addi $t4, $t4, -1
-	j loop_shooting
-
-loop_shooting_end:
+	move $t8, $s6
+	move $t9, $s7
+	li $a2, 2
+	jal draw_shooting_loop_1
 	pop_stack ($ra)
 	jr $ra
 
 shoot_pause:
-	li $a0, 200
+	li $a0, 500
 	li $v0, 32
 	syscall
 	jr $ra
+
+
+# draw_gameover:
+# 	address_xy
+# 	li $t1, DITTO_COLOUR_1
